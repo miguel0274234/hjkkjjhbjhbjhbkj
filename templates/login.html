@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Docente | Deep Ocean Management</title>
+    <title>Docente | Elim Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
         :root {
-            --primary: #00f5d4;
-            --secondary: #00b4d8;
-            --accent: #72efdd;
-            --bg-dark: #020617;
-            --card-bg: rgba(15, 23, 42, 0.6);
-            --input-bg: rgba(0, 0, 0, 0.3);
+            /* Cores extraídas da imagem Elim */
+            --primary: #d4e117;       /* Amarelo Limão (Pássaro/Topo) */
+            --secondary: #009ce0;     /* Azul Ciano (Curva inferior) */
+            --accent: #005da3;        /* Azul Médio (Texto Elim) */
+            --bg-dark: #162a44;       /* Azul Marinho (Fundo da logo) */
+            --bg-deep: #0d1a2b;       /* Azul ainda mais escuro para profundidade */
+            
+            --card-bg: rgba(22, 42, 68, 0.7);
+            --input-bg: rgba(0, 0, 0, 0.2);
             --text-main: #f1f5f9;
             --text-muted: #94a3b8;
         }
@@ -23,7 +26,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background-color: var(--bg-dark);
+            background-color: var(--bg-deep);
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             height: 100vh;
@@ -33,18 +36,18 @@
             overflow: hidden;
         }
 
-        /* Fundo Dinâmico (Efeito Abissal) */
         .ocean-bg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 100%);
         }
 
+        /* Blobs com as novas cores da logo */
         .blob {
             position: absolute;
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, rgba(0, 245, 212, 0.05) 0%, transparent 70%);
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(212, 225, 23, 0.07) 0%, transparent 70%);
             filter: blur(80px);
             border-radius: 50%;
             animation: move 25s infinite alternate ease-in-out;
@@ -55,31 +58,26 @@
             to { transform: translate(30%, 20%) rotate(360deg); }
         }
 
-        /* Glass Card */
         .prof-container {
             width: 100%;
             max-width: 440px;
             padding: 20px;
-            perspective: 1000px;
         }
 
         .prof-card {
             background: var(--card-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 32px;
             padding: 50px 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            position: relative;
-            transition: transform 0.3s ease;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
         }
 
-        /* Badge de Status */
         .status-badge {
             position: absolute;
             top: 25px; right: 30px;
-            background: rgba(0, 245, 212, 0.1);
+            background: rgba(212, 225, 23, 0.1);
             border: 1px solid var(--primary);
             color: var(--primary);
             padding: 4px 12px;
@@ -90,31 +88,28 @@
             font-weight: 800;
         }
 
-        /* Icone e Header */
         .header-section { text-align: center; margin-bottom: 40px; }
         
         .icon-box {
             width: 70px; height: 70px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             margin: 0 auto 20px;
-            border-radius: 20px;
+            border-radius: 22px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1.8rem;
-            color: #020617;
-            box-shadow: 0 10px 20px rgba(0, 245, 212, 0.2);
+            color: var(--bg-deep);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
 
-        h2 { font-weight: 800; font-size: 1.75rem; letter-spacing: -0.5px; margin-bottom: 8px; }
-        .subtitle { color: var(--text-muted); font-size: 0.95rem; }
+        h2 { font-weight: 800; font-size: 1.75rem; color: #fff; }
+        .subtitle { color: var(--secondary); font-weight: 600; font-size: 0.9rem; margin-top: 5px; }
 
-        /* Estilização dos Inputs */
         .input-group { margin-bottom: 24px; position: relative; }
 
         .input-group i {
             position: absolute; left: 18px; top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted);
-            transition: 0.3s;
+            color: var(--secondary);
         }
 
         .input-group input {
@@ -124,46 +119,35 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             color: white;
-            font-size: 1rem;
             outline: none;
-            transition: all 0.3s ease;
+            transition: 0.3s;
         }
 
         .input-group input:focus {
             border-color: var(--primary);
-            background: rgba(0, 245, 212, 0.03);
-            box-shadow: 0 0 0 4px rgba(0, 245, 212, 0.1);
+            box-shadow: 0 0 0 4px rgba(212, 225, 23, 0.1);
         }
 
-        .input-group input:focus + i { color: var(--primary); }
-
-        /* Botão de Autenticação */
         .btn-glow {
             width: 100%;
             padding: 18px;
             border: none;
             border-radius: 16px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: #020617;
-            font-weight: 700;
+            background: linear-gradient(90deg, var(--secondary), var(--accent));
+            color: white;
+            font-weight: 800;
             font-size: 1rem;
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: 0.4s;
             display: flex; align-items: center; justify-content: center; gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .btn-glow:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 245, 212, 0.3);
+        .btn-glow:hover:not(:disabled) {
+            transform: translateY(-2px);
             filter: brightness(1.1);
-        }
-
-        .btn-glow:active { transform: translateY(0); }
-
-        /* Links e Rodapé */
-        .footer-links {
-            margin-top: 35px;
-            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 156, 224, 0.3);
         }
 
         .link-back {
@@ -173,56 +157,52 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            margin-top: 25px;
             transition: 0.3s;
         }
-
         .link-back:hover { color: var(--primary); }
 
-        /* Mobile */
-        @media (max-width: 480px) {
-            .prof-card { padding: 40px 25px; }
-        }
     </style>
 </head>
 <body>
 
     <div class="ocean-bg">
         <div class="blob" style="top: -10%; left: -5%;"></div>
-        <div class="blob" style="bottom: -5%; right: -5%; animation-delay: -7s; background: radial-gradient(circle, rgba(0, 180, 216, 0.05) 0%, transparent 70%);"></div>
+        <div class="blob" style="bottom: -10%; right: -5%; background: radial-gradient(circle, rgba(0, 156, 224, 0.07) 0%, transparent 70%);"></div>
     </div>
 
     <div class="prof-container">
         <main class="prof-card">
-            <span class="status-badge">Docência</span>
+            <span class="status-badge">Docente</span>
             
             <header class="header-section">
                 <div class="icon-box">
-                    <i class="fas fa-compass"></i>
+                    <i class="fas fa-graduation-cap"></i>
                 </div>
                 <h2>Acesso Mestre</h2>
-                <p class="subtitle">Deep Ocean Intelligence System</p>
+                <p class="subtitle">ELIM MANAGEMENT SYSTEM</p>
             </header>
 
             <form id="loginForm">
                 <div class="input-group">
-                    <i class="fas fa-user-tie"></i>
-                    <input type="email" id="email" placeholder="E-mail Institucional" required autocomplete="email">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required>
                 </div>
 
                 <div class="input-group">
-                    <i class="fas fa-key"></i>
-                    <input type="password" id="password" placeholder="Chave de Acesso" required>
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required>
                 </div>
 
                 <button type="submit" class="btn-glow" id="btnSubmit">
                     <span>Entrar no Sistema</span>
-                    <i class="fas fa-chevron-right"></i>
+                    <i class="fas fa-arrow-right"></i>
                 </button>
             </form>
 
-            <div class="footer-links">
-                <a href="/login" class="link-back">
-                    <i class="fas fa-arrow-left-long"></i> Portal do Estudante
+            <div style="text-align: center;">
+                <a href="/login-estudante" class="link-back">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Estudantil
                 </a>
             </div>
         </main>
@@ -231,16 +211,13 @@
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
             const btn = document.getElementById('btnSubmit');
             const originalContent = btn.innerHTML;
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
 
-            // Feedback de Processamento
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Autenticando...';
-            btn.style.filter = 'grayscale(0.5)';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Validando...</span>';
 
             try {
                 const response = await fetch('/login', {
@@ -252,40 +229,37 @@
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    if (result.role === 'aluno') {
-                        throw new Error('Nível de acesso insuficiente para este portal.');
+                    if (result.role !== 'docente' && result.role !== 'admin' && result.role !== 'professor') {
+                        throw new Error('Acesso exclusivo para nível docente.');
                     }
 
                     Swal.fire({
                         icon: 'success',
-                        title: 'Bem-vindo, Mestre',
-                        text: 'Sincronização abissal concluída.',
-                        background: '#0f172a',
+                        title: 'Bem-vindo',
+                        text: 'Sincronização concluída.',
+                        background: '#162a44',
                         color: '#fff',
                         showConfirmButton: false,
-                        timer: 1800,
-                        backdrop: `rgba(2, 6, 23, 0.8)`
+                        timer: 1500
                     }).then(() => {
                         window.location.href = result.redirect;
                     });
+
                 } else {
-                    throw new Error(result.error || 'Falha na verificação das credenciais.');
+                    throw new Error(result.error || 'Credenciais inválidas.');
                 }
 
             } catch (err) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Erro de Protocolo',
+                    title: 'Erro de Acesso',
                     text: err.message,
-                    background: '#0f172a',
+                    background: '#162a44',
                     color: '#fff',
-                    confirmButtonColor: '#00f5d4'
+                    confirmButtonColor: '#009ce0'
                 });
-                
-                // Resetar botão
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
-                btn.style.filter = 'none';
             }
         });
     </script>

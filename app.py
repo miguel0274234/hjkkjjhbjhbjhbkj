@@ -240,24 +240,60 @@ def api_user_action(uid):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated: return redirect(url_for('dashboard'))
+    # 1. Se já estiver logado, redireciona direto
+    if current_user.is_authenticated:
+        if request.is_json:
+            return jsonify({
+                "success": True, 
+                "role": current_user.role, 
+                "redirect": url_for('dashboard')
+            })
+        return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
+        # 2. Captura dados de JSON (AJAX) ou Formulário comum
         data = request.get_json() if request.is_json else request.form
-        user = User.query.filter_by(email=data.get('email')).first()
+        email = data.get('email')
+        password = data.get('password')
         
-        if user and user.check_password(data.get('password')):
-            if not user.is_approved:
-                msg = "Conta aguardando aprovação."
-                return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "info")
+        # 3. Busca o usuário
+        user = User.query.filter_by(email=email).first()
+        
+        # 4. Verificação de Credenciais
+        if user and user.check_password(password):
             
+            # 5. Verificação de Status (Aprovação/Ativo)
+            if not user.is_approved:
+                msg = "Acesso negado: Sua conta ainda aguarda aprovação administrativa."
+                return jsonify({"success": False, "error": msg}), 401 if request.is_json else flash(msg, "info")
+            
+            if hasattr(user, 'is_active') and not user.is_active:
+                msg = "Esta conta foi desativada pelo administrador."
+                return jsonify({"success": False, "error": msg}), 401 if request.is_json else flash(msg, "danger")
+
+            # 6. Executa o Login Real
             login_user(user, remember=True)
             user.last_login = datetime.utcnow()
             db.session.commit()
-            registrar_log("Login realizado")
-            return jsonify({"success": True, "redirect": url_for('dashboard')}) if request.is_json else redirect(url_for('dashboard'))
             
-        return jsonify({"success": False, "error": "Credenciais Inválidas"}) if request.is_json else flash("Erro no login", "danger")
+            registrar_log(f"Login realizado via {'JSON' if request.is_json else 'Form'}")
+
+            # 7. Resposta de Sucesso (Envia ROLE e REDIRECT para o seu JS)
+            if request.is_json:
+                return jsonify({
+                    "success": True, 
+                    "role": user.role,  # Crucial para o seu script 'Acesso Mestre'
+                    "redirect": url_for('dashboard')
+                })
+            
+            return redirect(url_for('dashboard'))
+            
+        # 8. Erro de Credenciais (E-mail ou Senha incorretos)
+        msg_erro = "Credenciais inválidas. Verifique seu e-mail e chave de acesso."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg_erro}), 401
+        
+        flash(msg_erro, "danger")
 
     return render_template('login.html')
 
