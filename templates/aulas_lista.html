@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Explorar Aulas | ITEL ELIM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --azul-escuro: #020617;    
+            --azul-medio: #0f172a;
+            --azul-claro: #3da9e2;     
+            --dourado: #d4af37;       
+            --texto-cor: #94a3b8;
+            --glass: rgba(30, 41, 59, 0.4);
+            --borda-glass: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--azul-escuro);
+            background-image: radial-gradient(circle at 100% 0%, rgba(61, 169, 226, 0.08) 0%, transparent 35%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* --- NAVBAR --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 8%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--borda-glass);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo-container { font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; }
+        
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+        .nav-link { 
+            text-decoration: none; color: var(--texto-cor); font-size: 0.9rem; font-weight: 600;
+            padding: 8px 12px; border-radius: 8px; transition: 0.3s;
+        }
+        .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+
+        /* --- FILTROS --- */
+        .filter-bar {
+            padding: 40px 8% 20px;
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .filter-btn {
+            padding: 10px 20px;
+            border-radius: 30px;
+            background: var(--azul-medio);
+            border: 1px solid var(--borda-glass);
+            color: var(--texto-cor);
+            text-decoration: none;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .filter-btn.active {
+            background: var(--azul-claro);
+            color: var(--azul-escuro);
+            border-color: var(--azul-claro);
+        }
+
+        /* --- GRID DE AULAS --- */
+        .main-content { padding: 20px 8% 60px; }
+        
+        .grid-aulas {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .aula-card {
+            background: var(--glass);
+            border: 1px solid var(--borda-glass);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .aula-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--azul-claro);
+            background: rgba(30, 41, 59, 0.7);
+        }
+
+        .thumbnail-area {
+            width: 100%;
+            height: 180px;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .thumbnail-area img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+        }
+
+        .play-icon {
+            position: absolute;
+            font-size: 3rem;
+            color: #fff;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+
+        .aula-card:hover .play-icon { transform: scale(1.2); color: var(--azul-claro); opacity: 1; }
+
+        .aula-info { padding: 20px; flex-grow: 1; }
+        
+        .aula-tag {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--azul-claro);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .aula-titulo {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .aula-desc {
+            font-size: 0.85rem;
+            color: var(--texto-cor);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .aula-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid var(--borda-glass);
+        }
+
+        .meta-item { font-size: 0.75rem; color: var(--texto-cor); display: flex; align-items: center; gap: 5px; }
+
+        .btn-assistir {
+            text-decoration: none;
+            background: var(--azul-claro);
+            color: var(--azul-escuro);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 100px 0;
+            grid-column: 1 / -1;
+        }
+
+        .empty-state i { font-size: 4rem; color: var(--azul-medio); margin-bottom: 20px; }
+
+        @media (max-width: 768px) {
+            header { padding: 15px 5%; }
+            .grid-aulas { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">ITEL ELIM</div>
+        <div class="nav-actions">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+            <a href="{{ url_for('upload') }}" class="nav-link" style="color: var(--dourado)">
+                <i class="fa-solid fa-plus"></i> Nova Aula
+            </a>
+        </div>
+    </header>
+
+    <nav class="filter-bar">
+        <a href="{{ url_for('lista_aulas') }}" class="filter-btn {{ 'active' if not request.args.get('cat') else '' }}">Todos os Módulos</a>
+        <a href="{{ url_for('lista_aulas', cat='Teologia') }}" class="filter-btn {{ 'active' if request.args.get('cat') == 'Teologia' else '' }}">Teologia</a>
+        <a href="{{ url_for('lista_aulas', cat='Liderança') }}" class="filter-btn {{ 'active' if request.args.get('cat') == 'Liderança' else '' }}">Liderança</a>
+        <a href="{{ url_for('lista_aulas', cat='História') }}" class="filter-btn {{ 'active' if request.args.get('cat') == 'História' else '' }}">História</a>
+    </nav>
+
+    <main class="main-content">
+        <div class="grid-aulas">
+            {% for aula in aulas %}
+            <div class="aula-card">
+                <div class="thumbnail-area">
+                    <img src="https://img.youtube.com/vi/{{ aula.url_video }}/mqdefault.jpg" alt="Thumbnail">
+                    <i class="fa-solid fa-circle-play play-icon"></i>
+                </div>
+                
+                <div class="aula-info">
+                    <span class="aula-tag">{{ aula.categoria }}</span>
+                    <h3 class="aula-titulo">{{ aula.titulo }}</h3>
+                    <p class="aula-desc">{{ aula.descricao }}</p>
+                    
+                    <div class="aula-footer">
+                        <div class="meta-item">
+                            <i class="fa-regular fa-clock"></i>
+                            {{ aula.minutos_estimados }} min
+                        </div>
+                        <a href="/aula/{{ aula.slug }}" class="btn-assistir">Assistir Agora</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fa-solid fa-book-open"></i>
+                <h3>Nenhuma aula encontrada</h3>
+                <p style="color: var(--texto-cor)">Aguarde o administrador publicar novos conteúdos.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+</body>
+</html>

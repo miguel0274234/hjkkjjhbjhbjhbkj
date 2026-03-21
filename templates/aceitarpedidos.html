@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle | Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --admin-red: #352883; /* Neon Red para Admin */
+            --bg-deep: #010810;
+            --glass: rgba(255, 42, 109, 0.03);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            background: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            padding: 40px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        .header-admin {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+            border-bottom: 1px solid rgba(255, 42, 109, 0.2);
+            padding-bottom: 20px;
+        }
+
+        .header-admin h1 { font-size: 1.5rem; letter-spacing: 2px; }
+        .header-admin span { color: var(--admin-red); font-weight: 800; }
+
+        /* Tabela de Pedidos */
+        .requests-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 15px;
+        }
+
+        .requests-table th {
+            text-align: left;
+            padding: 10px 20px;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .request-row {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 42, 109, 0.1);
+            transition: 0.3s;
+        }
+
+        .request-row:hover {
+            border-color: var(--admin-red);
+            transform: scale(1.01);
+        }
+
+        .request-row td {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 42, 109, 0.1);
+            border-bottom: 1px solid rgba(255, 42, 109, 0.1);
+        }
+
+        .request-row td:first-child { border-left: 1px solid rgba(255, 42, 109, 0.1); border-radius: 15px 0 0 15px; }
+        .request-row td:last-child { border-right: 1px solid rgba(255, 42, 109, 0.1); border-radius: 0 15px 15px 0; }
+
+        .user-info div { font-weight: bold; }
+        .user-info small { color: var(--text-dim); }
+
+        .badge-unidade {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+        }
+
+        /* Botões de Ação */
+        .btn-approve {
+            background: var(--admin-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-approve:hover {
+            box-shadow: 0 0 20px rgba(255, 42, 109, 0.4);
+            filter: brightness(1.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 100px;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header-admin">
+            <h1><span>COMMAND CENTER</span></h1>
+            <a href="/dashboard" style="color: white; text-decoration: none;"><i class="fas fa-times"></i> Sair</a>
+        </header>
+
+        <section>
+            <h2 style="margin-bottom: 20px;">Pedidos de Registro Pendentes</h2>
+            
+            {% if pedidos %}
+            <table class="requests-table">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Unidade</th>
+                        <th>Data do Pedido</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pedidos %}
+                    <tr class="request-row" id="user-row-{{ user.id }}">
+                        <td class="user-info">
+                            <div>{{ user.name }}</div>
+                            <small>{{ user.email }}</small>
+                        </td>
+                        <td><span class="badge-unidade">{{ user.unidade_rel.nome }}</span></td>
+                        <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <button class="btn-approve" onclick="aprovarUsuario('{{ user.id }}', '{{ user.name }}')">
+                                <i class="fas fa-check"></i> APROVAR
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                <p>Nenhum pedido pendente no momento.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <script>
+        async function aprovarUsuario(userId, userName) {
+            const confirm = await Swal.fire({
+                title: 'Aprovar Usuário?',
+                text: `Deseja liberar o acesso para ${userName}?`,
+                icon: 'question',
+                showCancelButton: true,
+                background: '#010810',
+                color: '#fff',
+                confirmButtonColor: '#ff2a6d',
+                confirmButtonText: 'Sim, Aprovar!',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    const response = await fetch(`/api/admin/aprovar/${userId}`, { method: 'POST' });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            text: result.message,
+                            icon: 'success',
+                            background: '#010810',
+                            color: '#fff',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        // Remove a linha da tabela com efeito
+                        document.getElementById(`user-row-${userId}`).style.opacity = '0';
+                        setTimeout(() => document.getElementById(`user-row-${userId}`).remove(), 500);
+                    }
+                } catch (error) {
+                    Swal.fire('Erro!', 'Não foi possível aprovar o usuário.', 'error');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

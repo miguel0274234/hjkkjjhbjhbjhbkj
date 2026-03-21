@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil | ITEL - ELIM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --azul-escuro: #0f172a;    
+            --azul-medio: #1e293b;
+            --azul-claro: #3da9e2;     
+            --dourado: #d4af37;       
+            --branco: #ffffff;
+            --texto-cor: #e2e8f0;
+            --glass: rgba(30, 41, 59, 0.7);
+            --borda-glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            background: radial-gradient(circle at 50% 100%, #1e3a5f 0%, var(--azul-escuro) 100%);
+            background-attachment: fixed;
+            color: var(--texto-cor);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5%;
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--borda-glass);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo-img { height: 40px; }
+
+        .btn-back {
+            color: var(--texto-cor);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-back:hover { color: var(--azul-claro); }
+
+        .profile-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .profile-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--borda-glass);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+        }
+
+        .avatar-main {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid var(--dourado);
+            background: var(--azul-medio);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--dourado);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .role-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: var(--azul-claro);
+            color: var(--azul-escuro);
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 50px;
+            text-transform: uppercase;
+            border: 2px solid var(--azul-escuro);
+        }
+
+        /* Estilo especial para Badge de Admin */
+        .badge-admin {
+            background: var(--dourado) !important;
+        }
+
+        .profile-info h1 {
+            margin: 10px 0 5px;
+            font-size: 1.8rem;
+            color: #fff;
+        }
+
+        .profile-info p {
+            color: var(--azul-claro);
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .info-grid {
+            text-align: left;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 10px;
+        }
+
+        .info-item:last-child { border: none; margin: 0; }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* Botão de Admin */
+        .btn-admin {
+            background: var(--dourado);
+            color: var(--azul-escuro);
+            border: none;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+        }
+        .btn-admin:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        .btn-edit {
+            background: var(--branco);
+            color: var(--azul-escuro);
+        }
+        .btn-edit:hover { background: var(--azul-claro); transform: translateY(-2px); }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .btn-logout:hover { background: #ef4444; color: #fff; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .profile-card { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i> Voltar
+        </a>
+        <img src="logo.png" alt="ITEL" class="logo-img">
+    </header>
+
+    <main class="profile-container">
+        <div class="profile-card">
+            <div class="avatar-container">
+                <div class="avatar-main">
+                    {% if user.role == 'admin' %}
+                        <i class="fa-solid fa-user-shield"></i>
+                    {% else %}
+                        <i class="fa-solid fa-user-graduate"></i>
+                    {% endif %}
+                </div>
+                <span class="role-badge {% if user.role == 'admin' %}badge-admin{% endif %}">
+                    {{ user.role }}
+                </span>
+            </div>
+
+            <div class="profile-info">
+                <h1>{{ user.name }}</h1>
+                <p>Membro ITEL - ELIM</p>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">E-mail Acadêmico</span>
+                    <span class="info-value">{{ user.email }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Unidade da Igreja</span>
+                    <span class="info-value">{{ user.unidade_rel.nome }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Cidade</span>
+                    <span class="info-value">{{ user.unidade_rel.cidade }}</span>
+                </div>
+            </div>
+
+            <div class="actions">
+                {% if user.role == 'admin' %}
+                <a href="{{ url_for('lista_aprovacoes') }}" class="btn btn-admin">
+                    <i class="fa-solid fa-user-check"></i> Gerenciar Aprovações
+                </a>
+                {% endif %}
+
+                <a href="#" class="btn btn-edit">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar Perfil
+                </a>
+                
+                <a href="/logout" class="btn btn-logout">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sair da Conta
+                </a>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

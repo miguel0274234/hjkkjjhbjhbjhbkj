@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Aluno | Deep Ocean</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --bg-deep: #020b16;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --card-hover: rgba(0, 242, 254, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Fundo Animado Sutil */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 30%, rgba(0, 242, 254, 0.05), transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(79, 172, 254, 0.05), transparent 40%);
+            z-index: -1;
+        }
+
+        /* Navbar Moderna */
+        nav {
+            padding: 20px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(2, 11, 22, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            padding: 8px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .logout-btn:hover {
+            color: #ff4d4d;
+            border-color: #ff4d4d;
+            background: rgba(255, 77, 77, 0.05);
+        }
+
+        /* Conteúdo Principal */
+        main {
+            flex: 1;
+            padding: 40px 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .welcome-section {
+            margin-bottom: 40px;
+        }
+
+        .welcome-section h2 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            color: var(--text-dim);
+        }
+
+        /* Grid de Estudos */
+        .studies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .study-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 25px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .study-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .study-card:hover {
+            transform: translateY(-10px);
+            background: var(--card-hover);
+            border-color: rgba(0, 242, 254, 0.3);
+        }
+
+        .study-card:hover::before { opacity: 1; }
+
+        .study-tag {
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--primary);
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .study-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .study-card p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 15px;
+        }
+
+        .study-date {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .btn-read {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.3s;
+        }
+
+        .btn-read:hover {
+            gap: 10px;
+        }
+
+        /* Estado Vazio */
+        .empty-state {
+            text-align: center;
+            padding: 100px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.2;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .welcome-section h2 { font-size: 1.8rem; }
+            .studies-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-logo">
+            <i class="fas fa-water"></i>
+            <span>Ocean Student</span>
+        </div>
+        <div class="user-info">
+            <span style="font-size: 0.9rem; opacity: 0.8;">Olá, <strong>{{ user.name }}</strong></span>
+            <a href="/api/auth/logout" class="logout-btn">Sair</a>
+        </div>
+    </nav>
+
+    <main>
+        <header class="welcome-section">
+            <p>Unidade: {{ user.unidade.nome_igreja }}</p>
+            <h2>Seu Progresso de Estudos</h2>
+            <p>Explore os conteúdos preparados pelos seus professores.</p>
+        </header>
+
+        <div class="studies-grid" id="container-estudos">
+            <article class="study-card">
+                <span class="study-tag">Teologia</span>
+                <h3>Introdução aos Fundamentos da Fé</h3>
+                <p>Neste estudo, exploraremos as bases fundamentais que sustentam nossa caminhada cristã...</p>
+                <div class="card-footer">
+                    <span class="study-date">Postado em 06/03/2026</span>
+                    <a href="#" class="btn-read">Ler Agora <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <script>
+        // Função para buscar os estudos do seu Back-end em Python
+        async function carregarEstudos() {
+            try {
+                const response = await fetch('/api/studies');
+                const estudos = await response.json();
+                const container = document.getElementById('container-estudos');
+
+                if (estudos.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <h3>Nenhum estudo disponível no momento.</h3>
+                            <p>Fique atento, seu professor postará novos conteúdos em breve.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = estudos.map(s => `
+                    <article class="study-card">
+                        <span class="study-tag">${s.category}</span>
+                        <h3>${s.title}</h3>
+                        <p>${s.content}</p>
+                        <div class="card-footer">
+                            <span class="study-date">Postado em ${s.date}</span>
+                            <a href="/estudo/${s.id}" class="btn-read">Ler Agora <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </article>
+                `).join('');
+                
+            } catch (error) {
+                console.error("Erro ao carregar estudos:", error);
+            }
+        }
+
+        // Inicia a busca ao carregar a página
+        carregarEstudos();
+    </script>
+</body>
+</html>

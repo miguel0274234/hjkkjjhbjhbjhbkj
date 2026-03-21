@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro | Deep Ocean Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-reg: #00f5d4; 
+            --bg-deep: #010810;
+            --glass: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(0, 245, 212, 0.15);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Fundo Animado */
+        .ocean-bg {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #02111d 0%, #010810 100%);
+        }
+
+        .blob {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 245, 212, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(40px);
+            animation: move 25s infinite alternate;
+        }
+
+        @keyframes move {
+            from { transform: translate(-20%, -20%); }
+            to { transform: translate(20%, 20%); }
+        }
+
+        /* Card de Registro */
+        .reg-card {
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .reg-icon {
+            width: 70px; height: 70px;
+            background: rgba(0, 245, 212, 0.1);
+            border: 2px solid var(--primary-reg);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            color: var(--primary-reg);
+            font-size: 1.8rem;
+        }
+
+        h2 { color: var(--text-main); font-size: 1.8rem; margin-bottom: 8px; }
+        .subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 30px; }
+
+        /* Inputs de Elite */
+        .input-group { position: relative; margin-bottom: 18px; text-align: left; }
+        
+        .input-group i {
+            position: absolute; left: 20px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-reg);
+            opacity: 0.7;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 16px 20px 16px 55px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            color: white;
+            outline: none;
+            transition: 0.3s;
+            appearance: none; /* Remove seta padrão do select */
+        }
+
+        .input-group select { cursor: pointer; }
+        .input-group select option { background: #010810; color: white; }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--primary-reg);
+            box-shadow: 0 0 15px rgba(0, 245, 212, 0.1);
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary-reg);
+            color: #010810;
+            border: none;
+            border-radius: 15px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            transition: 0.4s;
+            margin-top: 10px;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 245, 212, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .footer-links { margin-top: 30px; font-size: 0.85rem; color: var(--text-dim); }
+        .footer-links a { color: var(--primary-reg); text-decoration: none; font-weight: 600; }
+        .footer-links a:hover { text-decoration: underline; }
+
+    </style>
+</head>
+<body>
+
+    <div class="ocean-bg">
+        <div class="blob"></div>
+    </div>
+
+    <main class="reg-card">
+        <div class="reg-icon"><i class="fas fa-user-plus"></i></div>
+        <h2>Novo Aluno</h2>
+        <p class="subtitle">Cadastre-se para acessar o Portal Ocean</p>
+
+        <form id="registerForm">
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="name" placeholder="Nome Completo" required>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="email" placeholder="E-mail Válido" required>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-map-marker-alt"></i>
+                <select id="unidade_id" required>
+                    <option value="" disabled selected>Selecione sua Unidade</option>
+                    {% for unidade in unidades %}
+                    <option value="{{ unidade.id }}">{{ unidade.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Crie uma Senha" required>
+            </div>
+
+            <button type="submit" class="btn-register" id="btnText">Criar Minha Conta</button>
+        </form>
+
+        <div class="footer-links">
+            Já possui uma conta? <a href="/login">Fazer Login</a>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnText');
+            const data = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                unidade_id: document.getElementById('unidade_id').value,
+                password: document.getElementById('password').value
+            };
+
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processando...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sucesso!',
+                        text: 'Sua conta foi criada com sucesso.',
+                        background: '#010810',
+                        color: '#fff',
+                        confirmButtonColor: '#00f5d4'
+                    }).then(() => {
+                        window.location.href = result.redirect;
+                    });
+                } else {
+                    throw new Error(result.error || 'Erro ao realizar cadastro.');
+                }
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ops!',
+                    text: err.message,
+                    background: '#010810',
+                    color: '#fff',
+                    confirmButtonColor: '#ff4444'
+                });
+                btn.innerHTML = 'Criar Minha Conta';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
