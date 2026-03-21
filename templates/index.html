@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso | ITEL ELIM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --azul-escuro: #020617;
+            --azul-claro: #3da9e2;
+            --dourado: #d4af37;
+            --glass: rgba(15, 23, 42, 0.8);
+            --borda-glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--azul-escuro);
+            background-image: radial-gradient(circle at center, rgba(61, 169, 226, 0.15) 0%, transparent 70%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* Card de Acesso */
+        .access-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--borda-glass);
+            padding: 50px 40px;
+            border-radius: 32px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-box {
+            margin-bottom: 30px;
+        }
+
+        .logo-box i {
+            font-size: 3rem;
+            color: var(--azul-claro);
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 10px rgba(61, 169, 226, 0.3));
+        }
+
+        h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 10px; }
+        p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 40px; }
+
+        /* Estilização dos Botões */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px;
+            border-radius: 16px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        .btn-login {
+            background: var(--azul-claro);
+            color: var(--azul-escuro);
+        }
+
+        .btn-login:hover {
+            background: #fff;
+            transform: scale(1.02);
+        }
+
+        .btn-register {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid var(--borda-glass);
+        }
+
+        .btn-register:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--dourado);
+            color: var(--dourado);
+        }
+
+        /* Efeito de brilho no fundo */
+        .glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: var(--azul-claro);
+            filter: blur(150px);
+            opacity: 0.1;
+            z-index: -1;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow" style="top: 10%; left: 10%;"></div>
+    <div class="glow" style="bottom: 10%; right: 10%;"></div>
+
+    <div class="access-card">
+        <div class="logo-box">
+            <i class="fa-solid fa-graduation-cap"></i>
+            <h1>Bem-vindo ao ITEL</h1>
+            <p>Escolha como deseja prosseguir para acessar a plataforma de ensino.</p>
+        </div>
+
+        <div class="btn-group">
+            <a href="{{ url_for('login') }}" class="btn btn-login">
+                <i class="fa-solid fa-right-to-bracket"></i> Entrar no Portal
+            </a>
+
+            <a href="{{ url_for('register') }}" class="btn btn-register">
+                <i class="fa-solid fa-user-plus"></i> Criar Nova Conta
+            </a>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <a href="/" style="color: #64748b; font-size: 0.8rem; text-decoration: none;">
+                <i class="fa-solid fa-arrow-left"></i> Voltar ao Início
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

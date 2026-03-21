@@ -17,8 +17,8 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config.update(
-    SECRET_KEY=os.environ.get("SECRET_KEY", "itel-core-quantum-2026-v8-ultra"),
-    SQLALCHEMY_DATABASE_URI="sqlite:///portal_itel_v8.db",
+    SECRET_KEY=os.environ.get("SECRET_KEY", "elim-core-quantum-2026-v8-ultra"),
+    SQLALCHEMY_DATABASE_URI="sqlite:///portal_elim_v8.db",
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     JSON_AS_ASCII=False,
     MAX_CONTENT_LENGTH=100 * 1024 * 1024, # 100MB
@@ -261,13 +261,153 @@ def login():
 
     return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    # Se já estiver logado, vai direto para o dashboard
+    if current_user.is_authenticated: 
+        return redirect(url_for('dashboard'))
+    
+    # Busca unidades para preencher o campo de seleção no formulário
+    unidades = Unidade.query.all()
+    
+    if request.method == 'POST':
+        # Suporta tanto JSON (AJAX) quanto formulário comum
+        data = request.get_json() if request.is_json else request.form
+        
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+        unidade_id = data.get('unidade_id')
+
+        # Validações básicas
+        if not name or not email or not password:
+            msg = "Preencha todos os campos obrigatórios."
+            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+
+        # Verifica se o e-mail já existe
+        if User.query.filter_by(email=email).first():
+            msg = "Este e-mail já está cadastrado."
+            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+
+        try:
+            novo_usuario = User(
+                name=name,
+                email=email,
+                unidade_id=unidade_id,
+                role="aluno",      # Por padrão, todo registro é aluno
+                is_approved=False, # Precisa de aprovação do Admin
+                is_active=True
+            )
+            novo_usuario.set_password(password)
+            
+            db.session.add(novo_usuario)
+            db.session.commit()
+            
+            # Log de sistema
+            log = LogAtividade(
+                user_id=novo_usuario.id, 
+                acao="Auto-registro realizado (Aguardando Aprovação)", 
+                ip_address=request.remote_addr
+            )
+            db.session.add(log)
+            db.session.commit()
+
+            msg = "Cadastro realizado com sucesso! Aguarde a aprovação de um administrador para entrar."
+            if request.is_json:
+                return jsonify({"success": True, "message": msg, "redirect": url_for('login')})
+            
+            flash(msg, "success")
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro no registro: {e}")
+            msg = "Erro interno ao processar cadastro."
+            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+
+    return render_template('register.html', unidades=unidades)
 @app.route("/logout")
 @login_required
 def logout():
     registrar_log("Logoff realizado")
     logout_user()
     return redirect(url_for('login'))
+@app.route("/perfil")
+@login_required
+def perfil():
+    try:
+        # 1. Estatísticas de Estudo (Otimizado)
+        # Usamos .count() direto no banco para performance em vez de carregar todos os objetos
+        concluidas_query = current_user.progresso.filter_by(concluido=True)
+        total_concluidas = concluidas_query.count()
+        
+        total_aulas = Aula.query.filter_by(status="publicado").count()
+        
+        # Proteção contra divisão por zero
+        percentual = 0
+        if total_aulas > 0:
+            percentual = round((total_concluidas / total_aulas * 100), 1)
+        
+        # 2. Ranking Simples (Top 5 alunos por XP)
+        # Filtramos apenas usuários ativos para o ranking ser justo
+        ranking = User.query.filter_by(is_active=True).order_by(User.xp.desc()).limit(5).all()
+        
+        # 3. Média de Notas (Sem bugs de NoneType)
+        # Buscamos as notas ignorando valores nulos
+        notas = [p.nota_quiz for p in concluidas_query.all() if p.nota_quiz is not None]
+        media_geral = 0
+        if notas:
+            media_geral = round(sum(notas) / len(notas), 1)
+        
+        # 4. Notificações não lidas
+        alertas = current_user.notificacoes.filter_by(lida=False)\
+            .order_by(Notification.created_at.desc()).all()
+        
+        # 5. Logs de Atividade
+        logs = LogAtividade.query.filter_by(user_id=current_user.id)\
+            .order_by(LogAtividade.timestamp.desc()).limit(10).all()
 
+        # 6. Cálculo de XP para próximo nível
+        # Evita bugs se o XP for exatamente múltiplo de 1000
+        xp_atual = current_user.xp or 0
+        xp_para_proximo = 1000 - (xp_atual % 1000)
+        if xp_para_proximo == 0: xp_para_proximo = 1000
+
+        return render_template("perfil.html", 
+            user=current_user,
+            stats={
+                "total_concluidas": total_concluidas,
+                "percentual_total": percentual,
+                "media_notas": media_geral,
+                "xp_falta_proximo_nivel": xp_para_proximo
+            },
+            ranking=ranking,
+            notificacoes=alertas,
+            logs=logs
+        )
+
+    except Exception as e:
+        # Log do erro no console para debug e redirecionamento seguro
+        print(f"Erro na rota de perfil: {e}")
+        flash("Erro ao carregar informações do perfil.", "danger")
+        return redirect(url_for('dashboard'))
+@app.route("/api/perfil/atualizar", methods=['POST'])
+@login_required
+def api_atualizar_perfil():
+    data = request.get_json()
+    try:
+        current_user.name = data.get('name', current_user.name)
+        
+        # Se o usuário quiser trocar a senha
+        if data.get('new_password'):
+            current_user.set_password(data.get('new_password'))
+            
+        db.session.commit()
+        registrar_log("Atualizou informações do perfil")
+        return jsonify({"success": True, "message": "Perfil atualizado com sucesso!"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 # --- CONFIGURAÇÃO INICIAL ---
 
 def setup_initial_data():
@@ -280,15 +420,15 @@ def setup_initial_data():
         if not User.query.filter_by(role="admin").first():
             admin = User(
                 name="Gestor Quantum", 
-                email="master@itel.edu", 
+                email="master@elim.edu", 
                 role="admin", 
                 is_approved=True, 
                 unidade_id=1
             )
-            admin.set_password("itel@2026")
+            admin.set_password("elim@2026")
             db.session.add(admin)
             db.session.commit()
-            print(">>> Sistema V8 Pronto. Admin: master@itel.edu / itel@2026")
+            print(">>> Sistema V8 Pronto. Admin: master@elim.edu / elim@2026")
 
 if __name__ == "__main__":
     setup_initial_data()
