@@ -10,12 +10,17 @@
     
     <style>
         :root {
-            --primary: #d4e117;       /* Amarelo Limão */
-            --secondary: #009ce0;     /* Azul Ciano */
-            --accent: #005da3;        /* Azul Médio */
-            --bg-deep: #0d1a2b;       /* Fundo Profundo */
-            --card-bg: rgba(22, 42, 68, 0.6);
+            /* Cores extraídas da imagem Elim */
+            --primary: #d4e117;       /* Amarelo Limão (Pássaro/Topo) */
+            --secondary: #009ce0;     /* Azul Ciano (Curva inferior) */
+            --accent: #005da3;        /* Azul Médio (Texto Elim) */
+            --bg-dark: #162a44;       /* Azul Marinho (Fundo da logo) */
+            --bg-deep: #0d1a2b;       /* Azul ainda mais escuro para profundidade */
+            
+            --card-bg: rgba(22, 42, 68, 0.7);
+            --input-bg: rgba(0, 0, 0, 0.2);
             --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,122 +36,124 @@
             overflow: hidden;
         }
 
-        /* Fundo Animado */
         .ocean-bg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at top right, #162a44, #0d1a2b);
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 100%);
         }
 
+        /* Blobs com as novas cores da logo */
         .blob {
             position: absolute;
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, rgba(212, 225, 23, 0.05) 0%, transparent 70%);
-            filter: blur(60px);
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(212, 225, 23, 0.07) 0%, transparent 70%);
+            filter: blur(80px);
             border-radius: 50%;
-            animation: move 20s infinite alternate ease-in-out;
+            animation: move 25s infinite alternate ease-in-out;
         }
 
         @keyframes move {
-            from { transform: translate(-10%, -10%); }
-            to { transform: translate(20%, 10%); }
+            from { transform: translate(-20%, -20%) rotate(0deg); }
+            to { transform: translate(30%, 20%) rotate(360deg); }
+        }
+
+        .prof-container {
+            width: 100%;
+            max-width: 440px;
+            padding: 20px;
         }
 
         .prof-card {
             background: var(--card-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 28px;
-            padding: 45px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-            position: relative;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 50px 40px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
         }
 
         .status-badge {
             position: absolute;
-            top: 20px; right: 25px;
-            background: rgba(212, 225, 23, 0.15);
+            top: 25px; right: 30px;
+            background: rgba(212, 225, 23, 0.1);
             border: 1px solid var(--primary);
             color: var(--primary);
-            padding: 5px 12px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.65rem;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 800;
         }
 
-        .header-section { text-align: center; margin-bottom: 35px; }
+        .header-section { text-align: center; margin-bottom: 40px; }
         
         .icon-box {
-            width: 65px; height: 65px;
+            width: 70px; height: 70px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
-            margin: 0 auto 15px;
-            border-radius: 20px;
+            margin: 0 auto 20px;
+            border-radius: 22px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.6rem;
+            font-size: 1.8rem;
             color: var(--bg-deep);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
 
-        h2 { font-weight: 800; letter-spacing: -0.5px; }
-        .subtitle { color: var(--secondary); font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
+        h2 { font-weight: 800; font-size: 1.75rem; color: #fff; }
+        .subtitle { color: var(--secondary); font-weight: 600; font-size: 0.9rem; margin-top: 5px; }
 
-        .input-group { margin-bottom: 20px; position: relative; }
+        .input-group { margin-bottom: 24px; position: relative; }
 
         .input-group i {
             position: absolute; left: 18px; top: 50%;
             transform: translateY(-50%);
             color: var(--secondary);
-            font-size: 1.1rem;
         }
 
         .input-group input {
             width: 100%;
             padding: 16px 20px 16px 52px;
-            background: rgba(0, 0, 0, 0.25);
+            background: var(--input-bg);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
+            border-radius: 16px;
             color: white;
             outline: none;
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.3s;
         }
 
         .input-group input:focus {
             border-color: var(--primary);
-            background: rgba(0, 0, 0, 0.4);
             box-shadow: 0 0 0 4px rgba(212, 225, 23, 0.1);
         }
 
         .btn-glow {
             width: 100%;
-            padding: 16px;
+            padding: 18px;
             border: none;
-            border-radius: 15px;
+            border-radius: 16px;
             background: linear-gradient(90deg, var(--secondary), var(--accent));
             color: white;
             font-weight: 800;
+            font-size: 1rem;
             cursor: pointer;
-            transition: 0.3s;
+            transition: 0.4s;
             display: flex; align-items: center; justify-content: center; gap: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
         .btn-glow:hover:not(:disabled) {
-            filter: brightness(1.1);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 156, 224, 0.3);
+            filter: brightness(1.1);
+            box-shadow: 0 10px 25px rgba(0, 156, 224, 0.3);
         }
 
-        .btn-glow:disabled { opacity: 0.6; cursor: not-allowed; }
-
         .link-back {
-            color: #94a3b8;
+            color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -155,63 +162,62 @@
         }
         .link-back:hover { color: var(--primary); }
 
-        .fa-spin { margin-right: 8px; }
     </style>
 </head>
 <body>
 
     <div class="ocean-bg">
-        <div class="blob" style="top: 0%; left: 0%;"></div>
-        <div class="blob" style="bottom: 0%; right: 0%; background: radial-gradient(circle, rgba(0, 156, 224, 0.05) 0%, transparent 70%);"></div>
+        <div class="blob" style="top: -10%; left: -5%;"></div>
+        <div class="blob" style="bottom: -10%; right: -5%; background: radial-gradient(circle, rgba(0, 156, 224, 0.07) 0%, transparent 70%);"></div>
     </div>
 
-    <div class="prof-card">
-        <span class="status-badge">Docente</span>
-        
-        <header class="header-section">
-            <div class="icon-box">
-                <i class="fas fa-graduation-cap"></i>
+    <div class="prof-container">
+        <main class="prof-card">
+            <span class="status-badge">Docente</span>
+            
+            <header class="header-section">
+                <div class="icon-box">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h2>Acesso Mestre</h2>
+                <p class="subtitle">ELIM MANAGEMENT SYSTEM</p>
+            </header>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required>
+                </div>
+
+                <button type="submit" class="btn-glow" id="btnSubmit">
+                    <span>Entrar no Sistema</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div style="text-align: center;">
+                <a href="/login-estudante" class="link-back">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Estudantil
+                </a>
             </div>
-            <h2>Acesso Mestre</h2>
-            <p class="subtitle">ELIM MANAGEMENT SYSTEM</p>
-        </header>
-
-        <form id="loginForm">
-            <div class="input-group">
-                <i class="fas fa-envelope"></i>
-                <input type="email" id="email" placeholder="E-mail Institucional" required>
-            </div>
-
-            <div class="input-group">
-                <i class="fas fa-lock"></i>
-                <input type="password" id="password" placeholder="Senha de Acesso" required>
-            </div>
-
-            <button type="submit" class="btn-glow" id="btnSubmit">
-                <span>Entrar no Sistema</span>
-                <i class="fas fa-arrow-right"></i>
-            </button>
-        </form>
-
-        <div style="text-align: center;">
-            <a href="/" class="link-back">
-                <i class="fas fa-arrow-left"></i> Voltar ao Portal
-            </a>
-        </div>
+        </main>
     </div>
 
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const btn = document.getElementById('btnSubmit');
+            const originalContent = btn.innerHTML;
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
-            // Feedback de carregamento
-            const originalContent = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Autenticando...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Validando...</span>';
 
             try {
                 const response = await fetch('/login', {
@@ -223,19 +229,24 @@
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    if (result.role !== 'docente' && result.role !== 'admin' && result.role !== 'professor') {
+                        throw new Error('Acesso exclusivo para nível docente.');
+                    }
+
                     Swal.fire({
                         icon: 'success',
-                        title: 'Acesso Autorizado',
-                        text: 'Preparando seu ambiente docente...',
-                        background: '#0d1a2b',
+                        title: 'Bem-vindo',
+                        text: 'Sincronização concluída.',
+                        background: '#162a44',
                         color: '#fff',
                         showConfirmButton: false,
                         timer: 1500
                     }).then(() => {
                         window.location.href = result.redirect;
                     });
+
                 } else {
-                    throw new Error(result.error || 'Falha na autenticação.');
+                    throw new Error(result.error || 'Credenciais inválidas.');
                 }
 
             } catch (err) {
@@ -243,7 +254,7 @@
                     icon: 'error',
                     title: 'Erro de Acesso',
                     text: err.message,
-                    background: '#0d1a2b',
+                    background: '#162a44',
                     color: '#fff',
                     confirmButtonColor: '#009ce0'
                 });
