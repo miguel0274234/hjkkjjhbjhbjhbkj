@@ -16,4 +16,4 @@ gunicorn==21.2.0
 # Utilitários de sistema (Dependências necessárias para Werkzeug/Flask)
 itsdangerous==2.1.2
 click==8.1.7
-Blinker==1.7.0]
+Blinker==1.7.0
