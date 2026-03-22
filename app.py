@@ -1,281 +1,496 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Docente | Elim Management</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+import os
+import uuid
+import re
+from datetime import datetime
+from functools import wraps
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, abort
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_cors import CORS
+
+# --- CONFIGURAÇÃO DE ALTA PERFORMANCE V8 ---
+app = Flask(__name__)
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config.update(
+    SECRET_KEY=os.environ.get("SECRET_KEY", "elim-core-quantum-2026-v8-ultra"),
+    SQLALCHEMY_DATABASE_URI="sqlite:///portal_elim_v8.db",
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    JSON_AS_ASCII=False,
+    MAX_CONTENT_LENGTH=100 * 1024 * 1024, # 100MB
+    UPLOAD_FOLDER=UPLOAD_FOLDER
+)
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+login_manager.login_message = "Sessão expirada ou acesso restrito."
+login_manager.login_message_category = "warning"
+CORS(app)
+
+# --- DATABASE MODELS ---
+
+class Unidade(db.Model):
+    __tablename__ = "unidades"
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False, unique=True)
+    cidade = db.Column(db.String(100))
+    usuarios = db.relationship("User", backref="unidade", lazy='dynamic')
+
+class User(db.Model, UserMixin):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()))
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), default="aluno", nullable=False) 
+    xp = db.Column(db.Integer, default=0) # Faltava este
+    is_active = db.Column(db.Boolean, default=True)
+    is_approved = db.Column(db.Boolean, default=False)
+    unidade_id = db.Column(db.Integer, db.ForeignKey("unidades.id"))
     
-    <style>
-        :root {
-            --primary: #d4e117;       
-            --secondary: #009ce0;     
-            --accent: #005da3;        
-            --bg-dark: #162a44;       
-            --bg-deep: #0d1a2b;       
-            --card-bg: rgba(22, 42, 68, 0.85);
-            --input-bg: rgba(0, 0, 0, 0.2);
-            --text-main: #f1f5f9;
-            --text-muted: #94a3b8;
-        }
+    last_login = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    logs = db.relationship('LogAtividade', backref='owner', cascade="all, delete-orphan")
+    progresso = db.relationship('ProgressoAula', backref='estudante', lazy='dynamic')
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-        body {
-            background-color: var(--bg-deep);
-            color: var(--text-main);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
-        .ocean-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1;
-            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 100%);
-        }
+class Aula(db.Model):
+    __tablename__ = "aulas"
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(255), nullable=False)
+    slug = db.Column(db.String(255), unique=True)
+    descricao = db.Column(db.Text)
+    url_video = db.Column(db.String(500)) 
+    categoria = db.Column(db.String(100), index=True)
+    minutos_estimados = db.Column(db.Integer, default=0)
+    quiz_data = db.Column(db.JSON) 
+    status = db.Column(db.String(20), default="publicado")
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-        .blob {
-            position: absolute;
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(212, 225, 23, 0.07) 0%, transparent 70%);
-            filter: blur(80px);
-            border-radius: 50%;
-            animation: move 25s infinite alternate ease-in-out;
-        }
+class ProgressoAula(db.Model):
+    __tablename__ = "progresso_aulas"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    aula_id = db.Column(db.Integer, db.ForeignKey('aulas.id'))
+    concluido = db.Column(db.Boolean, default=False)
+    nota_quiz = db.Column(db.Float, nullable=True)
+    data_conclusao = db.Column(db.DateTime)
 
-        @keyframes move {
-            from { transform: translate(-20%, -20%) rotate(0deg); }
-            to { transform: translate(30%, 20%) rotate(360deg); }
-        }
+class LogAtividade(db.Model):
+    __tablename__ = "logs_atividades"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    acao = db.Column(db.String(255))
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-        .prof-container {
-            width: 100%;
-            max-width: 440px;
-            padding: 20px;
-            z-index: 10;
-        }
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-        .prof-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 32px;
-            padding: 50px 40px;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
-            position: relative;
-        }
+# --- UTILITÁRIOS ---
 
-        .status-badge {
-            position: absolute;
-            top: 25px; right: 30px;
-            background: rgba(212, 225, 23, 0.1);
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 800;
-        }
+def registrar_log(acao):
+    if current_user.is_authenticated:
+        log = LogAtividade(
+            user_id=current_user.id, 
+            acao=acao, 
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        db.session.add(log)
+        db.session.commit()
 
-        .header-section { text-align: center; margin-bottom: 40px; }
+def role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated_function(*args, **kwargs):
+            if current_user.role not in roles:
+                if request.is_json:
+                    return jsonify({"success": False, "error": "Acesso Negado"}), 403
+                flash("Área restrita. Você não possui as permissões necessárias.", "danger")
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def extrair_id_youtube(url):
+    """Converte links normais do YouTube em IDs para Embed."""
+    if not url: return ""
+    # Trata links como https://www.youtube.com/watch?v=XXXX ou https://youtu.be/XXXX
+    regex = r'(?:v=|\/|be\/)([0-9A-Za-z_-]{11}).*'
+    match = re.search(regex, url)
+    return match.group(1) if match else url
+
+# --- ROTAS PRINCIPAIS ---
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    stats = {
+        "aulas_count": Aula.query.count(),
+        "meu_progresso": current_user.progresso.filter_by(concluido=True).count(),
+        "atividades": LogAtividade.query.filter_by(user_id=current_user.id).order_by(LogAtividade.timestamp.desc()).limit(8).all()
+    }
+    return render_template("home.html", **stats)
+
+# --- SISTEMA DE AULAS & CADASTRO ---
+
+@app.route("/aulas")
+@login_required
+def lista_aulas():
+    categoria = request.args.get('cat')
+    query = Aula.query.filter_by(status="publicado")
+    if categoria:
+        query = query.filter_by(categoria=categoria)
+    aulas = query.order_by(Aula.data_criacao.desc()).all()
+    return render_template("aulas_lista.html", aulas=aulas)
+
+@app.route("/upload", methods=['GET']) # Corrigido digitação para 'upload'
+@role_required('admin', 'professor')
+def upload():
+    return render_template("upload.html")
+
+@app.route("/api/aulas/cadastrar", methods=['POST']) # Rota que seu JS está chamando
+@role_required('admin', 'professor')
+def api_cadastrar_aula():
+    data = request.get_json()
+    
+    if not data or not data.get('nome'):
+        return jsonify({"success": False, "message": "O título da aula é obrigatório"}), 400
+
+    try:
+        # Gerar slug único para a URL amigável
+        base_slug = data.get('nome').lower().replace(" ", "-")
+        slug = f"{base_slug}-{str(uuid.uuid4())[:5]}"
         
-        .icon-box {
-            width: 70px; height: 70px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            margin: 0 auto 20px;
-            border-radius: 22px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.8rem;
-            color: var(--bg-deep);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
+        # Extrair apenas o ID do vídeo para garantir o Embed
+        video_id = extrair_id_youtube(data.get('url_video'))
+        
+        nova_aula = Aula(
+            titulo=data.get('nome'),
+            slug=slug,
+            descricao=data.get('descricao'),
+            url_video=video_id,
+            categoria=data.get('categoria', 'Geral'),
+            minutos_estimados=int(data.get('tempo_estimado', 0)),
+            quiz_data=data.get('quiz'), # Salva a lista de objetos como JSON no SQLite
+            criado_por=current_user.id
+        )
+        
+        db.session.add(nova_aula)
+        db.session.commit()
+        
+        registrar_log(f"Cadastrou aula: {nova_aula.titulo}")
+        
+        return jsonify({
+            "success": True, 
+            "message": "Aula e Quiz cadastrados com sucesso!", 
+            "redirect": url_for('lista_aulas')
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao salvar aula: {e}")
+        return jsonify({"success": False, "message": "Erro ao salvar no banco de dados."}), 500
 
-        h2 { font-weight: 800; font-size: 1.75rem; color: #fff; }
-        .subtitle { color: var(--secondary); font-weight: 600; font-size: 0.9rem; margin-top: 5px; }
+# --- ADMINISTRAÇÃO & AUTH (Mantidos conforme seu original) ---
 
-        .input-group { margin-bottom: 24px; position: relative; }
+@app.route("/admin/usuarios")
+@role_required('admin')
+def gerenciar_usuarios():
+    users = User.query.all()
+    return render_template("admin_users.html", users=users)
 
-        .input-group i {
-            position: absolute; left: 18px; top: 50%;
-            transform: translateY(-50%);
-            color: var(--secondary);
-        }
+@app.route("/api/admin/usuario/<int:uid>/action", methods=['POST'])
+@role_required('admin')
+def api_user_action(uid):
+    user = User.query.get_or_404(uid)
+    data = request.get_json()
+    action = data.get('action')
+    
+    if action == 'approve':
+        user.is_approved = True
+    elif action == 'toggle_active':
+        user.is_active = not user.is_active
+    elif action == 'delete' and user.role != 'admin':
+        db.session.delete(user)
+    
+    db.session.commit()
+    return jsonify({"success": True})
 
-        .input-group input {
-            width: 100%;
-            padding: 16px 20px 16px 52px;
-            background: var(--input-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            color: white;
-            outline: none;
-            transition: 0.3s;
-        }
-
-        .input-group input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(212, 225, 23, 0.1);
-        }
-
-        .btn-glow {
-            width: 100%;
-            padding: 18px;
-            border: none;
-            border-radius: 16px;
-            background: linear-gradient(90deg, var(--secondary), var(--accent));
-            color: white;
-            font-weight: 800;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: 0.4s;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-glow:hover:not(:disabled) {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-            box-shadow: 0 10px 25px rgba(0, 156, 224, 0.3);
-        }
-
-        .btn-glow:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .link-back {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.9rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 25px;
-            transition: 0.3s;
-        }
-        .link-back:hover { color: var(--primary); }
-
-    </style>
-</head>
-<body>
-
-    <div class="ocean-bg">
-        <div class="blob" style="top: -10%; left: -5%;"></div>
-        <div class="blob" style="bottom: -10%; right: -5%; background: radial-gradient(circle, rgba(0, 156, 224, 0.07) 0%, transparent 70%);"></div>
-    </div>
-
-    <div class="prof-container">
-        <main class="prof-card">
-            <span class="status-badge">Docente</span>
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.get_json() if request.is_json else request.form
+        email = data.get('email')
+        password = data.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user and user.check_password(password):
+            if not user.is_approved:
+                return jsonify({"success": False, "error": "Aguarde aprovação"}), 401
             
-            <header class="header-section">
-                <div class="icon-box">
-                    <i class="fas fa-graduation-cap"></i>
-                </div>
-                <h2>Acesso Mestre</h2>
-                <p class="subtitle">ELIM MANAGEMENT SYSTEM</p>
-            </header>
+            login_user(user, remember=True)
+            return jsonify({"success": True, "redirect": url_for('dashboard'), "role": user.role})
+        
+        return jsonify({"success": False, "error": "Credenciais inválidas"}), 401
 
-            <form id="loginForm">
-                <div class="input-group">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required autocomplete="email">
-                </div>
-
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required autocomplete="current-password">
-                </div>
-
-                <button type="submit" class="btn-glow" id="btnSubmit">
-                    <span>Entrar no Sistema</span>
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-            </form>
-
-            <div style="text-align: center;">
-                <a href="/" class="link-back">
-                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Principal
-                </a>
-            </div>
-        </main>
-    </div>
-
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+    return render_template('login.html')
+    # 1. Se já estiver logado, redireciona direto
+    if current_user.is_authenticated:
+        if request.is_json:
+            return jsonify({
+                "success": True, 
+                "role": current_user.role, 
+                "redirect": url_for('dashboard')
+            })
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        # 2. Captura dados de JSON (AJAX) ou Formulário comum
+        data = request.get_json() if request.is_json else request.form
+        email = data.get('email')
+        password = data.get('password')
+        
+        # 3. Busca o usuário
+        user = User.query.filter_by(email=email).first()
+        
+        # 4. Verificação de Credenciais
+        if user and user.check_password(password):
             
-            const btn = document.getElementById('btnSubmit');
-            const originalContent = btn.innerHTML;
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+            # 5. Verificação de Status (Aprovação/Ativo)
+            if not user.is_approved:
+                msg = "Acesso negado: Sua conta ainda aguarda aprovação administrativa."
+                return jsonify({"success": False, "error": msg}), 401 if request.is_json else flash(msg, "info")
+            
+            if hasattr(user, 'is_active') and not user.is_active:
+                msg = "Esta conta foi desativada pelo administrador."
+                return jsonify({"success": False, "error": msg}), 401 if request.is_json else flash(msg, "danger")
 
-            // Bloqueia botão para evitar cliques múltiplos
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Sincronizando...</span>';
+            # 6. Executa o Login Real
+            login_user(user, remember=True)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            registrar_log(f"Login realizado via {'JSON' if request.is_json else 'Form'}")
 
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
+            # 7. Resposta de Sucesso (Envia ROLE e REDIRECT para o seu JS)
+            if request.is_json:
+                return jsonify({
+                    "success": True, 
+                    "role": user.role,  # Crucial para o seu script 'Acesso Mestre'
+                    "redirect": url_for('dashboard')
+                })
+            
+            return redirect(url_for('dashboard'))
+            
+        # 8. Erro de Credenciais (E-mail ou Senha incorretos)
+        msg_erro = "Credenciais inválidas. Verifique seu e-mail e chave de acesso."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg_erro}), 401
+        
+        flash(msg_erro, "danger")
 
-                // Tenta ler o JSON, mas trata se o servidor retornar um erro bruto (HTML)
-                let result;
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    result = await response.json();
-                } else {
-                    throw new Error('O servidor encontrou um problema técnico (Erro 500).');
-                }
+    return render_template('login.html')
 
-                if (response.ok && result.success) {
-                    // Verifica se o usuário tem permissão de docente ou admin
-                    const allowedRoles = ['docente', 'admin', 'professor'];
-                    if (!allowedRoles.includes(result.role)) {
-                        throw new Error('Acesso negado: Esta área é exclusiva para Docentes.');
-                    }
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    # Se já estiver logado, vai direto para o dashboard
+    if current_user.is_authenticated: 
+        return redirect(url_for('dashboard'))
+    
+    # Busca unidades para preencher o campo de seleção no formulário
+    unidades = Unidade.query.all()
+    
+    if request.method == 'POST':
+        # Suporta tanto JSON (AJAX) quanto formulário comum
+        data = request.get_json() if request.is_json else request.form
+        
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+        unidade_id = data.get('unidade_id')
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Acesso Autorizado',
-                        text: 'Bem-vindo ao centro de gestão ELIM.',
-                        background: '#162a44',
-                        color: '#fff',
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => {
-                        window.location.href = result.redirect || '/dashboard';
-                    });
+        # Validações básicas
+        if not name or not email or not password:
+            msg = "Preencha todos os campos obrigatórios."
+            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
 
-                } else {
-                    throw new Error(result.error || 'Credenciais inválidas ou conta não aprovada.');
-                }
+        # Verifica se o e-mail já existe
+        if User.query.filter_by(email=email).first():
+            msg = "Este e-mail já está cadastrado."
+            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
 
-            } catch (err) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Falha na Autenticação',
-                    text: err.message,
-                    background: '#162a44',
-                    color: '#fff',
-                    confirmButtonColor: '#009ce0'
-                });
-                
-                // Restaura o botão em caso de erro
-                btn.disabled = false;
-                btn.innerHTML = originalContent;
-            }
-        });
-    </script>
-</body>
-</html>
+        try:
+            novo_usuario = User(
+                name=name,
+                email=email,
+                unidade_id=unidade_id,
+                role="aluno",      # Por padrão, todo registro é aluno
+                is_approved=False, # Precisa de aprovação do Admin
+                is_active=True
+            )
+            novo_usuario.set_password(password)
+            
+            db.session.add(novo_usuario)
+            db.session.commit()
+            
+            # Log de sistema
+            log = LogAtividade(
+                user_id=novo_usuario.id, 
+                acao="Auto-registro realizado (Aguardando Aprovação)", 
+                ip_address=request.remote_addr
+            )
+            db.session.add(log)
+            db.session.commit()
+
+            msg = "Cadastro realizado com sucesso! Aguarde a aprovação de um administrador para entrar."
+            if request.is_json:
+                return jsonify({"success": True, "message": msg, "redirect": url_for('login')})
+            
+            flash(msg, "success")
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro no registro: {e}")
+            msg = "Erro interno ao processar cadastro."
+            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+
+    return render_template('register.html', unidades=unidades)
+@app.route("/logout")
+@login_required
+def logout():
+    registrar_log("Logoff realizado")
+    logout_user()
+    return redirect(url_for('login'))
+@app.route("/perfil")
+@login_required
+def perfil():
+    try:
+        # 1. Estatísticas de Estudo (Otimizado)
+        # Usamos .count() direto no banco para performance em vez de carregar todos os objetos
+        concluidas_query = current_user.progresso.filter_by(concluido=True)
+        total_concluidas = concluidas_query.count()
+        
+        total_aulas = Aula.query.filter_by(status="publicado").count()
+        
+        # Proteção contra divisão por zero
+        percentual = 0
+        if total_aulas > 0:
+            percentual = round((total_concluidas / total_aulas * 100), 1)
+        
+        # 2. Ranking Simples (Top 5 alunos por XP)
+        # Filtramos apenas usuários ativos para o ranking ser justo
+        ranking = User.query.filter_by(is_active=True).order_by(User.xp.desc()).limit(5).all()
+        
+        # 3. Média de Notas (Sem bugs de NoneType)
+        # Buscamos as notas ignorando valores nulos
+        notas = [p.nota_quiz for p in concluidas_query.all() if p.nota_quiz is not None]
+        media_geral = 0
+        if notas:
+            media_geral = round(sum(notas) / len(notas), 1)
+        
+        # 4. Notificações não lidas
+        alertas = current_user.notificacoes.filter_by(lida=False)\
+            .order_by(Notification.created_at.desc()).all()
+        
+        # 5. Logs de Atividade
+        logs = LogAtividade.query.filter_by(user_id=current_user.id)\
+            .order_by(LogAtividade.timestamp.desc()).limit(10).all()
+
+        # 6. Cálculo de XP para próximo nível
+        # Evita bugs se o XP for exatamente múltiplo de 1000
+        xp_atual = current_user.xp or 0
+        xp_para_proximo = 1000 - (xp_atual % 1000)
+        if xp_para_proximo == 0: xp_para_proximo = 1000
+
+        return render_template("perfil.html", 
+            user=current_user,
+            stats={
+                "total_concluidas": total_concluidas,
+                "percentual_total": percentual,
+                "media_notas": media_geral,
+                "xp_falta_proximo_nivel": xp_para_proximo
+            },
+            ranking=ranking,
+            notificacoes=alertas,
+            logs=logs
+        )
+
+    except Exception as e:
+        # Log do erro no console para debug e redirecionamento seguro
+        print(f"Erro na rota de perfil: {e}")
+        flash("Erro ao carregar informações do perfil.", "danger")
+        return redirect(url_for('dashboard'))
+@app.route("/api/perfil/atualizar", methods=['POST'])
+@login_required
+def api_atualizar_perfil():
+    data = request.get_json()
+    try:
+        current_user.name = data.get('name', current_user.name)
+        
+        # Se o usuário quiser trocar a senha
+        if data.get('new_password'):
+            current_user.set_password(data.get('new_password'))
+            
+        db.session.commit()
+        registrar_log("Atualizou informações do perfil")
+        return jsonify({"success": True, "message": "Perfil atualizado com sucesso!"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+# --- CONFIGURAÇÃO INICIAL ---
+
+def setup_initial_data():
+    with app.app_context():
+        # Este comando cria o arquivo .db e todas as tabelas (users, aulas, unidades, etc)
+        print(">>> Verificando banco de dados...")
+        db.create_all() 
+        
+        # Verifica se a unidade padrão existe
+        if not Unidade.query.first():
+            db.session.add(Unidade(nome="Campus Central", cidade="Luanda"))
+            db.session.commit()
+            print(">>> Unidade inicial criada.")
+            
+        # Verifica se o Admin master existe
+        if not User.query.filter_by(role="admin").first():
+            admin = User(
+                name="Gestor Quantum", 
+                email="master@elim.edu", 
+                role="admin", 
+                is_approved=True, 
+                unidade_id=1
+            )
+            admin.set_password("elim@2026")
+            db.session.add(admin)
+            db.session.commit()
+            print(">>> Admin master criado: master@elim.edu / elim@2026")
+        else:
+            print(">>> Tabelas verificadas e Admin já existente.")
+
+if __name__ == "__main__":
+    setup_initial_data()
+    app.run(debug=True, host="0.0.0.0", port=5000)
