@@ -1,6 +1,19 @@
+# Framework Core
 Flask==3.0.2
-Flask-SQLAlchemy==2.0.34
+Werkzeug==3.0.1
+
+# Database Layer (SQLAlchemy 2.0 compatível)
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.34
+
+# Authentication & Security
 Flask-Login==0.6.3
 Flask-Cors==4.0.0
-Werkzeug==3.0.1
+
+# Production Server
 gunicorn==21.2.0
+
+# Utilitários de sistema (Dependências necessárias para Werkzeug/Flask)
+itsdangerous==2.1.2
+click==8.1.7
+Blinker==1.7.0]
