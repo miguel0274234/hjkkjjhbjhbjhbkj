@@ -465,17 +465,11 @@ def api_atualizar_perfil():
 
 def setup_initial_data():
     with app.app_context():
-        # Este comando cria o arquivo .db e todas as tabelas (users, aulas, unidades, etc)
-        print(">>> Verificando banco de dados...")
-        db.create_all() 
-        
-        # Verifica se a unidade padrão existe
+        db.create_all()
         if not Unidade.query.first():
             db.session.add(Unidade(nome="Campus Central", cidade="Luanda"))
             db.session.commit()
-            print(">>> Unidade inicial criada.")
             
-        # Verifica se o Admin master existe
         if not User.query.filter_by(role="admin").first():
             admin = User(
                 name="Gestor Quantum", 
@@ -487,9 +481,7 @@ def setup_initial_data():
             admin.set_password("elim@2026")
             db.session.add(admin)
             db.session.commit()
-            print(">>> Admin master criado: master@elim.edu / elim@2026")
-        else:
-            print(">>> Tabelas verificadas e Admin já existente.")
+            print(">>> Sistema V8 Pronto. Admin: master@elim.edu / elim@2026")
 
 if __name__ == "__main__":
     setup_initial_data()
