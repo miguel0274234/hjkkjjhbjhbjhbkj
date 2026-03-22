@@ -10,12 +10,14 @@
     
     <style>
         :root {
-            --primary: #d4e117;       
-            --secondary: #009ce0;     
-            --accent: #005da3;        
-            --bg-dark: #162a44;       
-            --bg-deep: #0d1a2b;       
-            --card-bg: rgba(22, 42, 68, 0.85);
+            /* Cores extraídas da imagem Elim */
+            --primary: #d4e117;       /* Amarelo Limão (Pássaro/Topo) */
+            --secondary: #009ce0;     /* Azul Ciano (Curva inferior) */
+            --accent: #005da3;        /* Azul Médio (Texto Elim) */
+            --bg-dark: #162a44;       /* Azul Marinho (Fundo da logo) */
+            --bg-deep: #0d1a2b;       /* Azul ainda mais escuro para profundidade */
+            
+            --card-bg: rgba(22, 42, 68, 0.7);
             --input-bg: rgba(0, 0, 0, 0.2);
             --text-main: #f1f5f9;
             --text-muted: #94a3b8;
@@ -41,6 +43,7 @@
             background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 100%);
         }
 
+        /* Blobs com as novas cores da logo */
         .blob {
             position: absolute;
             width: 600px; height: 600px;
@@ -59,18 +62,16 @@
             width: 100%;
             max-width: 440px;
             padding: 20px;
-            z-index: 10;
         }
 
         .prof-card {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 32px;
             padding: 50px 40px;
             box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
-            position: relative;
         }
 
         .status-badge {
@@ -149,8 +150,6 @@
             box-shadow: 0 10px 25px rgba(0, 156, 224, 0.3);
         }
 
-        .btn-glow:disabled { opacity: 0.6; cursor: not-allowed; }
-
         .link-back {
             color: var(--text-muted);
             text-decoration: none;
@@ -187,12 +186,12 @@
             <form id="loginForm">
                 <div class="input-group">
                     <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required autocomplete="email">
+                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required>
                 </div>
 
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required autocomplete="current-password">
+                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required>
                 </div>
 
                 <button type="submit" class="btn-glow" id="btnSubmit">
@@ -202,8 +201,8 @@
             </form>
 
             <div style="text-align: center;">
-                <a href="/" class="link-back">
-                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Principal
+                <a href="/login-estudante" class="link-back">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Estudantil
                 </a>
             </div>
         </main>
@@ -212,13 +211,11 @@
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const btn = document.getElementById('btnSubmit');
             const originalContent = btn.innerHTML;
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
-            // Inicia estado de carregamento
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Validando...</span>';
 
@@ -229,51 +226,38 @@
                     body: JSON.stringify({ email, password })
                 });
 
-                // Se o servidor retornar 500, tratamos aqui para não quebrar o JS
-                if (response.status === 500) {
-                    throw new Error('Instabilidade no servidor (Erro 500). Tente novamente em breve.');
-                }
-
-                const result = await response.json().catch(() => {
-                    throw new Error('Ocorreu um erro ao processar os dados do servidor.');
-                });
+                const result = await response.json();
 
                 if (response.ok && result.success) {
-                    // Verificação de cargos permitidos
-                    const allowedRoles = ['docente', 'admin', 'professor'];
-                    const userRole = result.role ? result.role.toLowerCase() : '';
-
-                    if (!allowedRoles.includes(userRole)) {
-                        throw new Error('Acesso negado: Perfil não autorizado para esta área.');
+                    if (result.role !== 'docente' && result.role !== 'admin' && result.role !== 'professor') {
+                        throw new Error('Acesso exclusivo para nível docente.');
                     }
 
                     Swal.fire({
                         icon: 'success',
-                        title: 'Acesso Autorizado',
-                        text: 'Redirecionando para o painel mestre...',
+                        title: 'Bem-vindo',
+                        text: 'Sincronização concluída.',
                         background: '#162a44',
                         color: '#fff',
                         showConfirmButton: false,
                         timer: 1500
                     }).then(() => {
-                        window.location.href = result.redirect || '/dashboard';
+                        window.location.href = result.redirect;
                     });
 
                 } else {
-                    throw new Error(result.error || 'Credenciais inválidas. Verifique seus dados.');
+                    throw new Error(result.error || 'Credenciais inválidas.');
                 }
 
             } catch (err) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Falha no Acesso',
+                    title: 'Erro de Acesso',
                     text: err.message,
                     background: '#162a44',
                     color: '#fff',
                     confirmButtonColor: '#009ce0'
                 });
-                
-                // Restaura o botão para permitir nova tentativa
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
             }
