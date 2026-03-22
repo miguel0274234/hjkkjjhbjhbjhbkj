@@ -49,7 +49,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="aluno", nullable=False) 
-    
+    xp = db.Column(db.Integer, default=0) # Faltava este
     is_active = db.Column(db.Boolean, default=True)
     is_approved = db.Column(db.Boolean, default=False)
     unidade_id = db.Column(db.Integer, db.ForeignKey("unidades.id"))
@@ -240,6 +240,23 @@ def api_user_action(uid):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        data = request.get_json() if request.is_json else request.form
+        email = data.get('email')
+        password = data.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user and user.check_password(password):
+            if not user.is_approved:
+                return jsonify({"success": False, "error": "Aguarde aprovação"}), 401
+            
+            login_user(user, remember=True)
+            return jsonify({"success": True, "redirect": url_for('dashboard'), "role": user.role})
+        
+        return jsonify({"success": False, "error": "Credenciais inválidas"}), 401
+
+    return render_template('login.html')
     # 1. Se já estiver logado, redireciona direto
     if current_user.is_authenticated:
         if request.is_json:
