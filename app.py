@@ -54,11 +54,14 @@ class User(db.Model, UserMixin):
     is_approved = db.Column(db.Boolean, default=False)
     unidade_id = db.Column(db.Integer, db.ForeignKey("unidades.id"))
     
+    # Novos campos para evitar o erro 500 na rota /perfil
+    xp = db.Column(db.Integer, default=0)
     last_login = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    logs = db.relationship('LogAtividade', backref='owner', cascade="all, delete-orphan")
-    progresso = db.relationship('ProgressoAula', backref='estudante', lazy='dynamic')
+
+    # Relacionamentos
+    logs = db.relationship('LogAtividade', backref='owner', cascade="all, delete-orphan", lazy='dynamic')
+    progresso = db.relationship('ProgressoAula', backref='user', cascade="all, delete-orphan", lazy='dynamic')
+    notificacoes = db.relationship('Notification', backref='user', cascade="all, delete-orphan", lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -98,6 +101,14 @@ class LogAtividade(db.Model):
     user_agent = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Notification(db.Model):
+    __tablename__ = "notifications"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    mensagem = db.Column(db.String(255))
+    lida = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -123,21 +134,19 @@ def role_required(*roles):
             if current_user.role not in roles:
                 if request.is_json:
                     return jsonify({"success": False, "error": "Acesso Negado"}), 403
-                flash("Área restrita. Você não possui as permissões necessárias.", "danger")
+                flash("Área restrita.", "danger")
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
 def extrair_id_youtube(url):
-    """Converte links normais do YouTube em IDs para Embed."""
     if not url: return ""
-    # Trata links como https://www.youtube.com/watch?v=XXXX ou https://youtu.be/XXXX
     regex = r'(?:v=|\/|be\/)([0-9A-Za-z_-]{11}).*'
     match = re.search(regex, url)
     return match.group(1) if match else url
 
-# --- ROTAS PRINCIPAIS ---
+# --- ROTAS ---
 
 @app.route("/")
 def index():
@@ -153,8 +162,6 @@ def dashboard():
     }
     return render_template("home.html", **stats)
 
-# --- SISTEMA DE AULAS & CADASTRO ---
-
 @app.route("/aulas")
 @login_required
 def lista_aulas():
@@ -165,296 +172,119 @@ def lista_aulas():
     aulas = query.order_by(Aula.data_criacao.desc()).all()
     return render_template("aulas_lista.html", aulas=aulas)
 
-@app.route("/upload", methods=['GET']) # Corrigido digitação para 'upload'
+@app.route("/upload", methods=['GET'])
 @role_required('admin', 'professor')
 def upload():
     return render_template("upload.html")
 
-@app.route("/api/aulas/cadastrar", methods=['POST']) # Rota que seu JS está chamando
+@app.route("/api/aulas/cadastrar", methods=['POST'])
 @role_required('admin', 'professor')
 def api_cadastrar_aula():
     data = request.get_json()
-    
     if not data or not data.get('nome'):
-        return jsonify({"success": False, "message": "O título da aula é obrigatório"}), 400
-
+        return jsonify({"success": False, "message": "O título é obrigatório"}), 400
     try:
-        # Gerar slug único para a URL amigável
         base_slug = data.get('nome').lower().replace(" ", "-")
         slug = f"{base_slug}-{str(uuid.uuid4())[:5]}"
-        
-        # Extrair apenas o ID do vídeo para garantir o Embed
         video_id = extrair_id_youtube(data.get('url_video'))
         
         nova_aula = Aula(
-            titulo=data.get('nome'),
-            slug=slug,
-            descricao=data.get('descricao'),
-            url_video=video_id,
-            categoria=data.get('categoria', 'Geral'),
+            titulo=data.get('nome'), slug=slug, descricao=data.get('descricao'),
+            url_video=video_id, categoria=data.get('categoria', 'Geral'),
             minutos_estimados=int(data.get('tempo_estimado', 0)),
-            quiz_data=data.get('quiz'), # Salva a lista de objetos como JSON no SQLite
-            criado_por=current_user.id
+            quiz_data=data.get('quiz'), criado_por=current_user.id
         )
-        
         db.session.add(nova_aula)
         db.session.commit()
-        
         registrar_log(f"Cadastrou aula: {nova_aula.titulo}")
-        
-        return jsonify({
-            "success": True, 
-            "message": "Aula e Quiz cadastrados com sucesso!", 
-            "redirect": url_for('lista_aulas')
-        })
-        
+        return jsonify({"success": True, "redirect": url_for('lista_aulas')})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar aula: {e}")
-        return jsonify({"success": False, "message": "Erro ao salvar no banco de dados."}), 500
-
-# --- ADMINISTRAÇÃO & AUTH (Mantidos conforme seu original) ---
-
-@app.route("/admin/usuarios")
-@role_required('admin')
-def gerenciar_usuarios():
-    users = User.query.all()
-    return render_template("admin_users.html", users=users)
-
-@app.route("/api/admin/usuario/<int:uid>/action", methods=['POST'])
-@role_required('admin')
-def api_user_action(uid):
-    user = User.query.get_or_404(uid)
-    data = request.get_json()
-    action = data.get('action')
-    
-    if action == 'approve':
-        user.is_approved = True
-    elif action == 'toggle_active':
-        user.is_active = not user.is_active
-    elif action == 'delete' and user.role != 'admin':
-        db.session.delete(user)
-
-    db.session.commit()
-    return jsonify({"success": True})
+        return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # 1. Se já estiver logado, redireciona direto
     if current_user.is_authenticated:
-        if request.is_json:
-            return jsonify({
-                "success": True, 
-                "role": current_user.role, 
-                "redirect": url_for('dashboard')
-            })
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        # 2. Captura dados de JSON (AJAX) ou Formulário comum
         data = request.get_json() if request.is_json else request.form
-        email = data.get('email')
-        password = data.get('password')
+        user = User.query.filter_by(email=data.get('email')).first()
         
-        # 3. Busca o usuário
-        user = User.query.filter_by(email=email).first()
-        
-        # 4. Verificação de Credenciais
-        if user and user.check_password(password):
-            
-            # 5. Verificação de Status (Aprovação/Ativo)
+        if user and user.check_password(data.get('password')):
             if not user.is_approved:
-                msg = "Acesso negado: Sua conta ainda aguarda aprovação administrativa."
+                msg = "Sua conta aguarda aprovação."
                 return jsonify({"success": False, "error": msg}), 401 if request.is_json else flash(msg, "info")
             
-            if hasattr(user, 'is_active') and not user.is_active:
-                msg = "Esta conta foi desativada pelo administrador."
-                return jsonify({"success": False, "error": msg}), 401 if request.is_json else flash(msg, "danger")
-
-            # 6. Executa o Login Real
             login_user(user, remember=True)
             user.last_login = datetime.utcnow()
             db.session.commit()
+            registrar_log("Login realizado")
             
-            registrar_log(f"Login realizado via {'JSON' if request.is_json else 'Form'}")
-
-            # 7. Resposta de Sucesso (Envia ROLE e REDIRECT para o seu JS)
             if request.is_json:
-                return jsonify({
-                    "success": True, 
-                    "role": user.role,  # Crucial para o seu script 'Acesso Mestre'
-                    "redirect": url_for('dashboard')
-                })
-            
+                return jsonify({"success": True, "role": user.role, "redirect": url_for('dashboard')})
             return redirect(url_for('dashboard'))
             
-        # 8. Erro de Credenciais (E-mail ou Senha incorretos)
-        msg_erro = "Credenciais inválidas. Verifique seu e-mail e chave de acesso."
-        if request.is_json:
-            return jsonify({"success": False, "error": msg_erro}), 401
-        
+        msg_erro = "Credenciais inválidas."
+        if request.is_json: return jsonify({"success": False, "error": msg_erro}), 401
         flash(msg_erro, "danger")
 
     return render_template('login.html')
 
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if current_user.is_authenticated: 
-        return redirect(url_for('dashboard'))
-    
+    if current_user.is_authenticated: return redirect(url_for('dashboard'))
     unidades = Unidade.query.all()
-    
     if request.method == 'POST':
         data = request.get_json() if request.is_json else request.form
+        if User.query.filter_by(email=data.get('email')).first():
+            return jsonify({"success": False, "error": "E-mail já cadastrado"}), 409
         
-        name = data.get('name')
-        email = data.get('email')
-        password = data.get('password')
-        unidade_id = data.get('unidade_id')
-
-        # Validação de campos obrigatórios
-        if not name or not email or not password:
-            msg = "Preencha todos os campos obrigatórios."
-            if request.is_json:
-                return jsonify({"success": False, "error": msg}), 400
-            flash(msg, "danger")
-            return render_template('register.html', unidades=unidades) # Retorno obrigatório
-
-        # Verifica se o e-mail já existe
-        if User.query.filter_by(email=email).first():
-            msg = "Este e-mail já está cadastrado."
-            if request.is_json:
-                return jsonify({"success": False, "error": msg}), 409
-            flash(msg, "danger")
-            return render_template('register.html', unidades=unidades) # Retorno obrigatório
-
         try:
-            novo_usuario = User(
-                name=name,
-                email=email,
-                unidade_id=unidade_id,
-                role="aluno",
-                is_approved=False,
-                is_active=True
-            )
-            novo_usuario.set_password(password)
-            
-            db.session.add(novo_usuario)
-            db.session.flush()  # Gera o ID do usuário sem finalizar a transação completa
-
-            # Criar log de atividade
-            log = LogAtividade(
-                user_id=novo_usuario.id, 
-                acao="Auto-registro realizado (Aguardando Aprovação)", 
-                ip_address=request.remote_addr
-            )
-            db.session.add(log)
-            
-            # Commit único para garantir atomicidade (ou ambos gravam, ou nenhum)
+            novo = User(name=data.get('name'), email=data.get('email'), unidade_id=data.get('unidade_id'), role="aluno")
+            novo.set_password(data.get('password'))
+            db.session.add(novo)
+            db.session.flush()
+            db.session.add(LogAtividade(user_id=novo.id, acao="Auto-registro", ip_address=request.remote_addr))
             db.session.commit()
-
-            msg = "Cadastro realizado com sucesso! Aguarde a aprovação."
-            if request.is_json:
-                return jsonify({"success": True, "message": msg, "redirect": url_for('login')}), 201
-            
-            flash(msg, "success")
-            return redirect(url_for('login'))
-
-        except Exception as e:
+            return jsonify({"success": True, "redirect": url_for('login')})
+        except Exception:
             db.session.rollback()
-            # Log do erro no console para debug
-            print(f"Erro no registro: {str(e)}")
-            msg = "Erro interno ao processar cadastro."
-            if request.is_json:
-                return jsonify({"success": False, "error": msg}), 500
-            flash(msg, "danger")
-            return render_template('register.html', unidades=unidades)
-
+            return jsonify({"success": False, "error": "Erro interno"}), 500
     return render_template('register.html', unidades=unidades)
-@app.route("/logout")
-@login_required
-def logout():
-    registrar_log("Logoff realizado")
-    logout_user()
-    return redirect(url_for('login'))
+
 @app.route("/perfil")
 @login_required
 def perfil():
     try:
-        # 1. Estatísticas de Estudo (Otimizado)
-        # Usamos .count() direto no banco para performance em vez de carregar todos os objetos
         concluidas_query = current_user.progresso.filter_by(concluido=True)
         total_concluidas = concluidas_query.count()
-        
         total_aulas = Aula.query.filter_by(status="publicado").count()
         
-        # Proteção contra divisão por zero
-        percentual = 0
-        if total_aulas > 0:
-            percentual = round((total_concluidas / total_aulas * 100), 1)
-        
-        # 2. Ranking Simples (Top 5 alunos por XP)
-        # Filtramos apenas usuários ativos para o ranking ser justo
+        percentual = round((total_concluidas / total_aulas * 100), 1) if total_aulas > 0 else 0
         ranking = User.query.filter_by(is_active=True).order_by(User.xp.desc()).limit(5).all()
         
-        # 3. Média de Notas (Sem bugs de NoneType)
-        # Buscamos as notas ignorando valores nulos
         notas = [p.nota_quiz for p in concluidas_query.all() if p.nota_quiz is not None]
-        media_geral = 0
-        if notas:
-            media_geral = round(sum(notas) / len(notas), 1)
+        media_geral = round(sum(notas) / len(notas), 1) if notas else 0
         
-        # 4. Notificações não lidas
-        alertas = current_user.notificacoes.filter_by(lida=False)\
-            .order_by(Notification.created_at.desc()).all()
-        
-        # 5. Logs de Atividade
-        logs = LogAtividade.query.filter_by(user_id=current_user.id)\
-            .order_by(LogAtividade.timestamp.desc()).limit(10).all()
+        alertas = Notification.query.filter_by(user_id=current_user.id, lida=False).all()
+        logs = LogAtividade.query.filter_by(user_id=current_user.id).order_by(LogAtividade.timestamp.desc()).limit(10).all()
 
-        # 6. Cálculo de XP para próximo nível
-        # Evita bugs se o XP for exatamente múltiplo de 1000
         xp_atual = current_user.xp or 0
         xp_para_proximo = 1000 - (xp_atual % 1000)
-        if xp_para_proximo == 0: xp_para_proximo = 1000
 
-        return render_template("perfil.html", 
-            user=current_user,
-            stats={
-                "total_concluidas": total_concluidas,
-                "percentual_total": percentual,
-                "media_notas": media_geral,
-                "xp_falta_proximo_nivel": xp_para_proximo
-            },
-            ranking=ranking,
-            notificacoes=alertas,
-            logs=logs
-        )
-
+        return render_template("perfil.html", user=current_user, ranking=ranking, notificacoes=alertas, logs=logs,
+            stats={"total_concluidas": total_concluidas, "percentual_total": percentual, "media_notas": media_geral, "xp_falta_proximo_nivel": xp_para_proximo})
     except Exception as e:
-        # Log do erro no console para debug e redirecionamento seguro
-        print(f"Erro na rota de perfil: {e}")
-        flash("Erro ao carregar informações do perfil.", "danger")
+        print(f"Erro perfil: {e}")
         return redirect(url_for('dashboard'))
-@app.route("/api/perfil/atualizar", methods=['POST'])
+
+@app.route("/logout")
 @login_required
-def api_atualizar_perfil():
-    data = request.get_json()
-    try:
-        current_user.name = data.get('name', current_user.name)
-        
-        # Se o usuário quiser trocar a senha
-        if data.get('new_password'):
-            current_user.set_password(data.get('new_password'))
-            
-        db.session.commit()
-        registrar_log("Atualizou informações do perfil")
-        return jsonify({"success": True, "message": "Perfil atualizado com sucesso!"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
-# --- CONFIGURAÇÃO INICIAL ---
+def logout():
+    registrar_log("Logoff")
+    logout_user()
+    return redirect(url_for('login'))
 
 def setup_initial_data():
     with app.app_context():
@@ -462,19 +292,11 @@ def setup_initial_data():
         if not Unidade.query.first():
             db.session.add(Unidade(nome="Campus Central", cidade="Luanda"))
             db.session.commit()
-            
         if not User.query.filter_by(role="admin").first():
-            admin = User(
-                name="Gestor Quantum", 
-                email="master@elim.edu", 
-                role="admin", 
-                is_approved=True, 
-                unidade_id=1
-            )
+            admin = User(name="Gestor Quantum", email="master@elim.edu", role="admin", is_approved=True, unidade_id=1)
             admin.set_password("elim@2026")
             db.session.add(admin)
             db.session.commit()
-            print(">>> Sistema V8 Pronto. Admin: master@elim.edu / elim@2026")
 
 if __name__ == "__main__":
     setup_initial_data()
