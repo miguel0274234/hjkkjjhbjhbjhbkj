@@ -226,12 +226,8 @@
                     body: JSON.stringify({ email, password })
                 });
 
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    if (result.role !== 'docente' && result.role !== 'admin' && result.role !== 'professor') {
-                        throw new Error('Acesso exclusivo para nível docente.');
-                    }
+                const result = await response.json(); 
+if(result.redirect) window.location.href = result.redirect;
 
                     Swal.fire({
                         icon: 'success',
