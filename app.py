@@ -45,6 +45,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="aluno", nullable=False) 
+    xp = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
     is_approved = db.Column(db.Boolean, default=False)
     unidade_id = db.Column(db.Integer, db.ForeignKey("unidades.id"))
@@ -216,12 +217,13 @@ def perfil():
         concluidas = current_user.progresso.filter_by(concluido=True).all()
         total_aulas = Aula.query.filter_by(status="publicado").count()
         percentual = round((len(concluidas) / total_aulas * 100), 1) if total_aulas > 0 else 0
-    
+        ranking = User.query.order_by(User.xp.desc()).limit(5).all()
         
         return render_template("perfil.html", user=current_user, stats={
             "total_concluidas": len(concluidas),
             "percentual_total": percentual,
-          } ) 
+            "xp_falta_proximo_nivel": 1000 - (current_user.xp % 1000)
+        }, ranking=ranking)
     except:
         return redirect(url_for('dashboard'))
 
@@ -239,7 +241,7 @@ def setup():
         if not Unidade.query.first():
             db.session.add(Unidade(nome="Campus Central", cidade="Luanda"))
         if not User.query.filter_by(role="admin").first():
-            admin = User(name="Admin", email="master@elim.edu", role="admin", is_approved=True, unidade_id=1)
+            admin = User(name="Admin", email="master@elim.edu", role="admin", is_approved=True, unidade_id=1, xp=2)
             admin.set_password("elim@2026")
             db.session.add(admin)
         db.session.commit()
