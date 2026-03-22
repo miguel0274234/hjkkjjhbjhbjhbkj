@@ -297,17 +297,15 @@ def login():
 
     return render_template('login.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Se já estiver logado, vai direto para o dashboard
     if current_user.is_authenticated: 
         return redirect(url_for('dashboard'))
     
-    # Busca unidades para preencher o campo de seleção no formulário
     unidades = Unidade.query.all()
     
     if request.method == 'POST':
-        # Suporta tanto JSON (AJAX) quanto formulário comum
         data = request.get_json() if request.is_json else request.form
         
         name = data.get('name')
@@ -315,51 +313,63 @@ def register():
         password = data.get('password')
         unidade_id = data.get('unidade_id')
 
-        # Validações básicas
+        # Validação de campos obrigatórios
         if not name or not email or not password:
             msg = "Preencha todos os campos obrigatórios."
-            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+            if request.is_json:
+                return jsonify({"success": False, "error": msg}), 400
+            flash(msg, "danger")
+            return render_template('register.html', unidades=unidades) # Retorno obrigatório
 
         # Verifica se o e-mail já existe
         if User.query.filter_by(email=email).first():
             msg = "Este e-mail já está cadastrado."
-            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+            if request.is_json:
+                return jsonify({"success": False, "error": msg}), 409
+            flash(msg, "danger")
+            return render_template('register.html', unidades=unidades) # Retorno obrigatório
 
         try:
             novo_usuario = User(
                 name=name,
                 email=email,
                 unidade_id=unidade_id,
-                role="aluno",      # Por padrão, todo registro é aluno
-                is_approved=False, # Precisa de aprovação do Admin
+                role="aluno",
+                is_approved=False,
                 is_active=True
             )
             novo_usuario.set_password(password)
             
             db.session.add(novo_usuario)
-            db.session.commit()
-            
-            # Log de sistema
+            db.session.flush()  # Gera o ID do usuário sem finalizar a transação completa
+
+            # Criar log de atividade
             log = LogAtividade(
                 user_id=novo_usuario.id, 
                 acao="Auto-registro realizado (Aguardando Aprovação)", 
                 ip_address=request.remote_addr
             )
             db.session.add(log)
+            
+            # Commit único para garantir atomicidade (ou ambos gravam, ou nenhum)
             db.session.commit()
 
-            msg = "Cadastro realizado com sucesso! Aguarde a aprovação de um administrador para entrar."
+            msg = "Cadastro realizado com sucesso! Aguarde a aprovação."
             if request.is_json:
-                return jsonify({"success": True, "message": msg, "redirect": url_for('login')})
+                return jsonify({"success": True, "message": msg, "redirect": url_for('login')}), 201
             
             flash(msg, "success")
             return redirect(url_for('login'))
 
         except Exception as e:
             db.session.rollback()
-            print(f"Erro no registro: {e}")
+            # Log do erro no console para debug
+            print(f"Erro no registro: {str(e)}")
             msg = "Erro interno ao processar cadastro."
-            return jsonify({"success": False, "error": msg}) if request.is_json else flash(msg, "danger")
+            if request.is_json:
+                return jsonify({"success": False, "error": msg}), 500
+            flash(msg, "danger")
+            return render_template('register.html', unidades=unidades)
 
     return render_template('register.html', unidades=unidades)
 @app.route("/logout")
