@@ -10,13 +10,11 @@
     
     <style>
         :root {
-            /* Cores extraídas da imagem Elim */
-            --primary: #d4e117;       /* Amarelo Limão (Pássaro/Topo) */
-            --secondary: #009ce0;     /* Azul Ciano (Curva inferior) */
-            --accent: #005da3;        /* Azul Médio (Texto Elim) */
-            --bg-dark: #162a44;       /* Azul Marinho (Fundo da logo) */
-            --bg-deep: #0d1a2b;       /* Azul ainda mais escuro para profundidade */
-            
+            --primary: #d4e117;       
+            --secondary: #009ce0;     
+            --accent: #005da3;        
+            --bg-dark: #162a44;       
+            --bg-deep: #0d1a2b;       
             --card-bg: rgba(22, 42, 68, 0.7);
             --input-bg: rgba(0, 0, 0, 0.2);
             --text-main: #f1f5f9;
@@ -43,7 +41,6 @@
             background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 100%);
         }
 
-        /* Blobs com as novas cores da logo */
         .blob {
             position: absolute;
             width: 600px; height: 600px;
@@ -62,6 +59,7 @@
             width: 100%;
             max-width: 440px;
             padding: 20px;
+            z-index: 10;
         }
 
         .prof-card {
@@ -72,6 +70,7 @@
             border-radius: 32px;
             padding: 50px 40px;
             box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
+            position: relative;
         }
 
         .status-badge {
@@ -110,6 +109,7 @@
             position: absolute; left: 18px; top: 50%;
             transform: translateY(-50%);
             color: var(--secondary);
+            transition: 0.3s;
         }
 
         .input-group input {
@@ -121,11 +121,17 @@
             color: white;
             outline: none;
             transition: 0.3s;
+            font-family: inherit;
         }
 
         .input-group input:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 4px rgba(212, 225, 23, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .input-group input:focus + i {
+            color: var(--primary);
         }
 
         .btn-glow {
@@ -150,6 +156,11 @@
             box-shadow: 0 10px 25px rgba(0, 156, 224, 0.3);
         }
 
+        .btn-glow:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .link-back {
             color: var(--text-muted);
             text-decoration: none;
@@ -162,6 +173,11 @@
         }
         .link-back:hover { color: var(--primary); }
 
+        /* Estilização do SweetAlert para combinar com o tema */
+        .swal2-popup {
+            border-radius: 24px !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+        }
     </style>
 </head>
 <body>
@@ -173,7 +189,7 @@
 
     <div class="prof-container">
         <main class="prof-card">
-            <span class="status-badge">Docente</span>
+            <span class="status-badge">Acesso Restrito</span>
             
             <header class="header-section">
                 <div class="icon-box">
@@ -183,15 +199,15 @@
                 <p class="subtitle">ELIM MANAGEMENT SYSTEM</p>
             </header>
 
-            <form id="loginForm">
+            <form id="loginForm" autocomplete="off">
                 <div class="input-group">
                     <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required>
+                    <input type="email" id="email" name="email" placeholder="E-mail Institucional" required autocomplete="email">
                 </div>
 
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required>
+                    <input type="password" id="password" name="password" placeholder="Senha de Acesso" required autocomplete="current-password">
                 </div>
 
                 <button type="submit" class="btn-glow" id="btnSubmit">
@@ -201,8 +217,8 @@
             </form>
 
             <div style="text-align: center;">
-                <a href="/login-estudante" class="link-back">
-                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Estudantil
+                <a href="/" class="link-back">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Portal Principal
                 </a>
             </div>
         </main>
@@ -216,8 +232,9 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
+            // Feedback Visual de Carregamento
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Validando...</span>';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Autenticando...</span>';
 
             try {
                 const response = await fetch('/login', {
@@ -229,34 +246,39 @@
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    if (result.role !== 'docente' && result.role !== 'admin' && result.role !== 'professor') {
-                        throw new Error('Acesso exclusivo para nível docente.');
+                    // Validação de nível de acesso (Role)
+                    const rolesPermitidas = ['admin', 'professor', 'docente'];
+                    if (!rolesPermitidas.includes(result.role)) {
+                        throw new Error('Esta conta não possui privilégios de nível Docente.');
                     }
 
                     Swal.fire({
                         icon: 'success',
-                        title: 'Bem-vindo',
-                        text: 'Sincronização concluída.',
+                        title: 'Acesso Autorizado',
+                        text: 'Sincronizando ambiente de gestão...',
                         background: '#162a44',
                         color: '#fff',
                         showConfirmButton: false,
-                        timer: 1500
+                        timer: 2000,
+                        timerProgressBar: true
                     }).then(() => {
-                        window.location.href = result.redirect;
+                        window.location.href = result.redirect || '/dashboard';
                     });
 
                 } else {
-                    throw new Error(result.error || 'Credenciais inválidas.');
+                    // Erro retornado pelo servidor (401, 403, etc)
+                    throw new Error(result.error || 'Credenciais inválidas ou conta pendente.');
                 }
 
             } catch (err) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Erro de Acesso',
-                    text: err.message,
+                    title: 'Falha na Autenticação',
+                    text: err.message === 'Failed to fetch' ? 'Erro de conexão com o servidor.' : err.message,
                     background: '#162a44',
                     color: '#fff',
-                    confirmButtonColor: '#009ce0'
+                    confirmButtonColor: '#009ce0',
+                    confirmButtonText: 'Tentar Novamente'
                 });
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
